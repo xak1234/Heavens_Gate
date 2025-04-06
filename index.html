@@ -18,10 +18,11 @@
 </head>
 <body class="flex flex-col items-center justify-start min-h-screen pt-4 px-4 space-y-6 text-center">
   <h1 class="text-4xl font-bold text-blue-400">Heaven's Gate</h1>
-  <div id="price" class="text-2xl">
+  <div id="price" class="text-2xl" aria-live="polite">
     XRP: <span class="text-green-400">Loading...</span>
   </div>
-  <div class="w-full max-w-xl">
+  <div class="text-xs text-gray-400" id="lastUpdated"></div>
+  <div class="w-full max-w-xl overflow-x-auto">
     <h2 class="text-lg font-semibold mb-2">24h XRP Price Trend</h2>
     <div id="chartContainer" class="flex justify-center">
       <canvas id="xrpChart" class="bg-gray-800 rounded shadow w-full h-32"></canvas>
@@ -29,15 +30,25 @@
   </div>
   <div class="w-full max-w-xl">
     <h2 class="text-md font-bold text-green-400 mt-2 mb-1 font-mono">FINANCIAL REGULATORY ADOPTION SIGNALS (LIVE)</h2>
-    <div id="signals" class="space-y-3">
+    <div id="signals" class="space-y-3" aria-live="polite">
       <!-- Signals go here -->
     </div>
   </div>
   <div class="w-full max-w-xl mt-4">
     <h2 class="text-md font-semibold text-white mb-2">XRP Investment Simulator</h2>
-    <div class='bg-blue-900 p-4 rounded'>
+    <div class='bg-blue-900 p-4 rounded w-3/4 mx-auto'>
       <input type="number" id="investmentInput" maxlength="5" value="1000" placeholder="Enter amount (max £99999)" class="w-full p-2 rounded bg-gray-700 text-white text-center text-sm mb-2" />
       <div id="investmentOutput" class="bg-blue-800 text-sm text-center p-3 rounded shadow text-blue-300 font-semibold">Investment value will appear here...</div>
+      <div class="flex flex-wrap justify-center gap-2 mt-3">
+        <button class="bg-blue-700 hover:bg-blue-600 rounded p-2 text-sm" data-target="5">$5</button>
+        <button class="bg-blue-700 hover:bg-blue-600 rounded p-2 text-sm" data-target="10">$10</button>
+        <button class="bg-blue-700 hover:bg-blue-600 rounded p-2 text-sm" data-target="15">$15</button>
+        <button class="bg-blue-700 hover:bg-blue-600 rounded p-2 text-sm" data-target="25">$25</button>
+        <button class="bg-blue-700 hover:bg-blue-600 rounded p-2 text-sm" data-target="50">$50</button>
+        <button class="bg-blue-700 hover:bg-blue-600 rounded p-2 text-sm" data-target="100">$100</button>
+        <button class="bg-blue-700 hover:bg-blue-600 rounded p-2 text-sm" data-target="200">$200</button>
+        <button class="bg-blue-700 hover:bg-blue-600 rounded p-2 text-sm" data-target="300">$300</button>
+      </div>
     </div>
   </div>
   <script>
@@ -54,17 +65,19 @@
           }
         }
       };
+
       const autoRefresh = () => location.reload();
       setInterval(autoRefresh, 5 * 60 * 1000);
 
       const priceElement = document.getElementById("price");
+      const updateTime = document.getElementById("lastUpdated");
 
-      const updateInvestmentOutput = (currentPrice, inputValue) => {
+      const updateInvestmentOutput = (currentPrice, inputValue, targetPrice = 300) => {
         const output = document.getElementById("investmentOutput");
         const val = parseInt(inputValue);
         if (!isNaN(val) && val > 0 && val <= 99999) {
-          const calculated = (((val / currentPrice) * 300) * 0.78).toFixed(2);
-          output.innerText = `If XRP reaches $300, your investment would be worth: £${calculated}`;
+          const calculated = (((val / currentPrice) * targetPrice) * 0.78).toFixed(2);
+          output.innerText = `If XRP reaches $${targetPrice}, your investment would be worth: £${calculated}`;
         } else {
           output.innerText = "Please enter a valid number up to 5 digits.";
         }
@@ -81,14 +94,21 @@
           const percentChange = (((current - start) / start) * 100).toFixed(2);
           const tooltip = `24h Change: ${percentChange}%`;
           const priceDisplay = `$${current.toFixed(3)} <span class='${color} ml-1' title='${tooltip}' class='text-xs ml-1 align-middle'>24h ${arrow}</span>`;
-          document.getElementById("price").innerHTML = `XRP: <span class="${color}">${priceDisplay}</span>`;
-          
+          priceElement.innerHTML = `XRP: <span class="${color}">${priceDisplay}</span>`;
+          updateTime.innerText = `Updated at ${new Date().toLocaleTimeString()}`;
+
           const input = document.getElementById("investmentInput");
           const output = document.getElementById("investmentOutput");
+          const buttons = document.querySelectorAll("button[data-target]");
+
           if (input && output) {
             updateInvestmentOutput(current, input.value);
-            input.addEventListener("input", () => {
-              updateInvestmentOutput(current, input.value);
+            input.addEventListener("input", () => updateInvestmentOutput(current, input.value));
+            buttons.forEach(button => {
+              button.addEventListener("click", () => {
+                const multiplier = parseFloat(button.dataset.target);
+                updateInvestmentOutput(current, input.value, multiplier);
+              });
             });
           }
         })
@@ -102,12 +122,13 @@
 
       const renderChart = (labels, values, label, isMock = false) => {
         const ctx = document.getElementById('xrpChart').getContext('2d');
+        if (window.xrpChartInstance) window.xrpChartInstance.destroy();
         const recentValues = values.slice(-4);
         const startPrice = recentValues[0];
         const endPrice = recentValues[recentValues.length - 1];
         const trendColor = endPrice > startPrice ? '#00FF00' : '#FF5555';
 
-        new Chart(ctx, {
+        window.xrpChartInstance = new Chart(ctx, {
           type: 'line',
           data: {
             labels,
@@ -131,43 +152,22 @@
                   color: '#ccc',
                   maxRotation: 45,
                   minRotation: 45,
-                  font: {
-                    size: 10
-                  }
+                  font: { size: 10 }
                 },
-                grid: {
-                  color: 'rgba(255, 255, 255, 0.1)'
-                }
+                grid: { color: 'rgba(255, 255, 255, 0.1)' }
               },
               y: {
                 ticks: {
                   color: '#ccc',
-                  callback: function(value) {
-                    return '$' + value.toFixed(2);
-                  },
-                  font: {
-                    size: 10
-                  }
+                  callback: value => '$' + value.toFixed(2),
+                  font: { size: 10 }
                 },
-                grid: {
-                  color: 'rgba(255, 255, 255, 0.1)'
-                }
+                grid: { color: 'rgba(255, 255, 255, 0.1)' }
               }
             },
-            plugins: {
-              legend: {
-                display: false
-              }
-            },
-            animation: {
-              duration: 1000,
-              easing: 'easeOutQuart'
-            },
-            elements: {
-              line: {
-                borderWidth: 2
-              }
-            }
+            plugins: { legend: { display: false } },
+            animation: { duration: 1000, easing: 'easeOutQuart' },
+            elements: { line: { borderWidth: 2 } }
           }
         });
       };
@@ -175,52 +175,20 @@
       fetchWithRetry(`https://api.coincap.io/v2/assets/ripple/history?interval=h1&start=${startTime}&end=${endTime}`)
         .then(response => {
           const data = response.data;
-          const labels = data.map(d => {
-            const date = new Date(parseInt(d.time));
-            return date.toLocaleString('en-US', {
-              hour: 'numeric',
-              minute: '2-digit',
-              hour12: true
-            }).toUpperCase();
-          });
+          const labels = data.map(d => new Date(parseInt(d.time)).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true }).toUpperCase());
           const values = data.map(d => parseFloat(d.priceUsd));
-          if (!labels.length || !values.length) throw new Error("No data available");
           renderChart(labels, values, 'XRP/USD (24h)');
         })
         .catch(() => {
-          const startAt = Math.floor(startTime / 1000);
-          const endAt = Math.floor(endTime / 1000);
-          fetchWithRetry(`https://api.kucoin.com/api/v1/market/candles?symbol=XRP-USDT&type=1hour&startAt=${startAt}&endAt=${endAt}`)
+          fetchWithRetry(`https://api.kucoin.com/api/v1/market/candles?symbol=XRP-USDT&type=1hour&startAt=${Math.floor(startTime / 1000)}&endAt=${Math.floor(endTime / 1000)}`)
             .then(response => {
               const data = response.data;
-              const labels = data.map(d => {
-                const date = new Date(parseInt(d[0]) * 1000);
-                return date.toLocaleString('en-US', {
-                  hour: 'numeric',
-                  minute: '2-digit',
-                  hour12: true
-                }).toUpperCase();
-              });
+              const labels = data.map(d => new Date(parseInt(d[0]) * 1000).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true }).toUpperCase());
               const values = data.map(d => parseFloat(d[4]));
-              if (!labels.length || !values.length) throw new Error("No data available");
               renderChart(labels, values, 'XRP/USD (24h)');
             })
             .catch(() => {
-              const chartContainer = document.getElementById("chartContainer");
-              chartContainer.innerHTML = '';
-              const ctx = document.createElement('canvas');
-              ctx.id = 'xrpChart';
-              ctx.className = 'bg-gray-800 rounded shadow w-full h-32';
-              chartContainer.appendChild(ctx);
-              const now = new Date();
-              const mockLabels = Array(24).fill().map((_, i) => {
-                const date = new Date(now.getTime() - (23 - i) * 60 * 60 * 1000);
-                return date.toLocaleString('en-US', {
-                  hour: 'numeric',
-                  minute: '2-digit',
-                  hour12: true
-                }).toUpperCase();
-              });
+              const mockLabels = Array(24).fill().map((_, i) => new Date(Date.now() - (23 - i) * 3600000).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true }).toUpperCase());
               const mockValues = Array(24).fill().map(() => 0.5 + Math.random() * 0.1);
               renderChart(mockLabels, mockValues, 'XRP/USD (Mock)', true);
             });
@@ -238,8 +206,7 @@
           });
         })
         .catch(err => {
-          document.getElementById("signals").innerHTML =
-            `<p class="text-red-400">Failed to load signals: ${err.message}</p>`;
+          document.getElementById("signals").innerHTML = `<p class="text-red-400">Failed to load signals: ${err.message}</p>`;
         });
     });
   </script>
