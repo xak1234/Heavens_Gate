@@ -6,41 +6,32 @@
   <title>Heaven's Gate - XRP Tracker</title>
   <script src="https://cdn.tailwindcss.com"></script>
 </head>
-<body class="p-6 font-sans">
+<body class="p-4">
   <h1 class="text-4xl font-bold text-blue-400 mb-4">Heaven's Gate</h1>
-  <div id="price" class="text-2xl mb-6">Live XRP Price: <span class="text-green-400">Loading...</span></div>
-
-  <h2 class="text-2xl font-semibold text-white mb-2">Adoption Signals</h2>
-  <div id="signals" class="space-y-3">
-    <!-- Signals will be injected here -->
+  <div id="price" class="text-2xl mb-4">Live XRP Price: Loading...</div>
+  <div id="signals" class="space-y-2">
+    <!-- Adoption signals will load here -->
   </div>
 
   <script>
-    // Fetch and display live XRP price from CoinGecko
+    // Live XRP Price
     fetch("https://api.coingecko.com/api/v3/simple/price?ids=ripple&vs_currencies=usd")
       .then(res => res.json())
       .then(data => {
-        const price = data.ripple.usd;
-        document.getElementById("price").innerHTML = `Live XRP Price: <span class="text-green-400">$${price}</span>`;
-      })
-      .catch(() => {
-        document.getElementById("price").innerHTML = "Live XRP Price: <span class='text-red-400'>Error loading</span>";
+        document.getElementById("price").innerText = "Live XRP Price: $" + data.ripple.usd;
       });
 
-    // Fetch adoption signals from local JSON file
-    fetch("Data/adoption-signals.json")
+    // Adoption Signals
+    fetch("data/adoption-signals.json")
       .then(res => res.json())
       .then(signals => {
         const container = document.getElementById("signals");
         signals.forEach(signal => {
-          const item = document.createElement("div");
-          item.className = "bg-gray-800 p-4 rounded shadow";
-          item.innerHTML = `<strong>${signal.date}</strong>: ${signal.message}`;
-          container.appendChild(item);
+          const div = document.createElement("div");
+          div.className = "bg-gray-800 p-2 rounded";
+          div.innerText = `${signal.date}: ${signal.message}`;
+          container.appendChild(div);
         });
-      })
-      .catch(() => {
-        document.getElementById("signals").innerHTML = "<p class='text-red-400'>Failed to load adoption signals.</p>";
       });
   </script>
 </body>
