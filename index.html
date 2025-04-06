@@ -9,12 +9,12 @@
 <body class="flex flex-col items-center justify-start min-h-screen pt-6 px-4 space-y-4">  <h1 class="text-4xl font-bold text-blue-400 text-center">Heaven's Gate</h1>  <div id="price" class="text-2xl text-center">
     Live XRP Price: <span class="text-green-400">Loading...</span>
   </div>  <div class="w-full max-w-2xl">
-    <h2 class="text-xl font-semibold text-center mb-1">24h XRP Price Trend</h2>
+    <h2 class="text-lg font-semibold text-center mb-1">24h XRP Price Trend</h2>
     <div id="chartContainer">
       <canvas id="xrpChart" class="bg-gray-800 rounded shadow w-full h-64"></canvas>
     </div>
   </div>  <div class="w-full max-w-2xl">
-    <h2 class="text-2xl font-semibold text-white text-center mt-2 mb-1">Adoption Signals</h2>
+    <h2 class="text-xl font-semibold text-white text-center mt-2 mb-1">Adoption Signals</h2>
     <div id="signals" class="space-y-3">
       <!-- Signals go here -->
     </div>
@@ -28,15 +28,15 @@
             return await res.json();
           } catch (err) {
             if (i === retries - 1) throw err;
-            console.warn(`Retry ${i + 1}/${retries} after ${delay}ms: ${err.message}`);
             await new Promise(resolve => setTimeout(resolve, delay));
           }
         }
       };
 
-      fetchWithRetry("https://api.coingecko.com/api/v3/simple/price?ids=ripple&vs_currencies=usd", {
-        headers: { "User-Agent": "Mozilla/5.0" }
-      })
+      const autoRefresh = () => location.reload();
+      setInterval(autoRefresh, 5 * 60 * 1000); // Auto-refresh every 5 minutes
+
+      fetchWithRetry("https://api.coingecko.com/api/v3/simple/price?ids=ripple&vs_currencies=usd")
         .then(data => {
           const price = data.ripple.usd.toFixed(3);
           document.getElementById("price").innerHTML =
@@ -50,7 +50,7 @@
       const endTime = Date.now();
       const startTime = endTime - 24 * 60 * 60 * 1000;
 
-      const renderChart = (labels, values, label) => {
+      const renderChart = (labels, values, label, isMock = false) => {
         const ctx = document.getElementById('xrpChart').getContext('2d');
         const recentValues = values.slice(-4);
         const startPrice = recentValues[0];
@@ -66,7 +66,7 @@
               data: values,
               borderColor: trendColor,
               backgroundColor: trendColor + '33',
-              tension: 0.3,
+              tension: 0.4,
               pointRadius: 1
             }]
           },
@@ -77,42 +77,40 @@
               x: { ticks: { color: '#ccc' } },
               y: { ticks: { color: '#ccc' } }
             },
-            plugins: { legend: { labels: { color: '#fff' } } }
+            plugins: {
+              legend: {
+                display: !isMock,
+                labels: { color: '#fff' }
+              }
+            },
+            animation: {
+              duration: 1000,
+              easing: 'easeOutQuart'
+            }
           }
         });
       };
 
-      fetchWithRetry(`https://api.coincap.io/v2/assets/ripple/history?interval=h1&start=${startTime}&end=${endTime}`, {
-        headers: { "User-Agent": "Mozilla/5.0" }
-      })
+      fetchWithRetry(`https://api.coincap.io/v2/assets/ripple/history?interval=h1&start=${startTime}&end=${endTime}`)
         .then(response => {
           const data = response.data;
           const labels = data.map(d => new Date(parseInt(d.time)).getHours().toString().padStart(2, '0') + ":00");
           const values = data.map(d => parseFloat(d.priceUsd).toFixed(3));
-
           if (!labels.length || !values.length) throw new Error("No data available");
-
           renderChart(labels, values, 'XRP/USD (24h)');
         })
-        .catch(err => {
-          console.error("CoinCap Error:", err);
+        .catch(() => {
           const startAt = Math.floor(startTime / 1000);
           const endAt = Math.floor(endTime / 1000);
-
-          fetchWithRetry(`https://api.kucoin.com/api/v1/market/candles?symbol=XRP-USDT&type=1hour&startAt=${startAt}&endAt=${endAt}`, {
-            headers: { "User-Agent": "Mozilla/5.0" }
-          })
+          fetchWithRetry(`https://api.kucoin.com/api/v1/market/candles?symbol=XRP-USDT&type=1hour&startAt=${startAt}&endAt=${endAt}`)
             .then(response => {
               const data = response.data;
               const labels = data.map(d => new Date(parseInt(d[0]) * 1000).getHours().toString().padStart(2, '0') + ":00");
               const values = data.map(d => parseFloat(d[4]).toFixed(3));
-
               if (!labels.length || !values.length) throw new Error("No data available");
-
               renderChart(labels, values, 'XRP/USD (24h)');
             })
-            .catch(err => {
-              console.error("KuCoin Chart Error:", err);
+            .catch(() => {
               const chartContainer = document.getElementById("chartContainer");
               chartContainer.innerHTML = '';
               const ctx = document.createElement('canvas');
@@ -121,35 +119,12 @@
               chartContainer.appendChild(ctx);
               const mockLabels = Array(24).fill().map((_, i) => `${i}:00`);
               const mockValues = Array(24).fill().map(() => 0.5 + Math.random() * 0.1);
-              const startMockPrice = mockValues[0];
-              const endMockPrice = mockValues[mockValues.length - 1];
-              const mockTrendColor = endMockPrice > startMockPrice ? '#00FF00' : '#FF0000';
-
-              new Chart(ctx.getContext('2d'), {
-                type: 'line',
-                data: {
-                  labels: mockLabels,
-                  datasets: [{
-                    label: 'XRP/USD (Mock)',
-                    data: mockValues,
-                    borderColor: mockTrendColor,
-                    backgroundColor: mockTrendColor + '33',
-                    tension: 0.3,
-                    pointRadius: 1
-                  }]
-                },
-                options: {
-                  responsive: true,
-                  maintainAspectRatio: false,
-                  scales: { x: { ticks: { color: '#ccc' } }, y: { ticks: { color: '#ccc' } } },
-                  plugins: { legend: { labels: { color: '#fff' } } }
-                }
-              });
+              renderChart(mockLabels, mockValues, 'XRP/USD (Mock)', true);
             });
         });
 
       fetch("Data/adoption-signals.json")
-        .then(res => { if (!res.ok) throw new Error("Signals API failed"); return res.json(); })
+        .then(res => res.json())
         .then(signals => {
           const container = document.getElementById("signals");
           signals.forEach(signal => {
