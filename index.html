@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html class="bg-gray-900 text-white" lang="en">
+<html lang="en" class="bg-gray-900 text-white">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -7,61 +7,72 @@
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
-<body class="p-4 font-sans">
+<body class="flex flex-col items-center justify-center p-6 space-y-6">
 
-  <h1 class="text-4xl font-bold text-blue-400 mb-4">Heaven's Gate</h1>
-  <div id="price" class="text-2xl mb-4">Live XRP Price: <span class="text-green-400">Loading...</span></div>
+  <h1 class="text-4xl font-bold text-blue-400 text-center">Heaven's Gate</h1>
 
-  <div class="my-6">
-    <h2 class="text-xl font-semibold mb-2">24h XRP Price Trend</h2>
-    <canvas id="xrpChart" height="200" class="w-full bg-gray-800 rounded shadow p-2"></canvas>
+  <div id="price" class="text-2xl text-center">
+    Live XRP Price: <span class="text-green-400">Loading...</span>
   </div>
 
-  <h2 class="text-2xl font-semibold text-white mb-2">Adoption Signals</h2>
-  <div id="signals" class="space-y-3 mb-10">
-    <!-- Signals will be injected here -->
+  <div class="w-full max-w-2xl">
+    <h2 class="text-xl font-semibold mb-2 text-center">24h XRP Price Trend</h2>
+    <canvas id="xrpChart" class="bg-gray-800 rounded shadow w-full h-64 p-2"></canvas>
+  </div>
+
+  <div class="w-full max-w-2xl">
+    <h2 class="text-2xl font-semibold text-white mb-2 text-center">Adoption Signals</h2>
+    <div id="signals" class="space-y-3">
+      <!-- Signals go here -->
+    </div>
   </div>
 
   <script>
-    // Live price
+    // Live XRP price
     fetch("https://api.coingecko.com/api/v3/simple/price?ids=ripple&vs_currencies=usd")
       .then(res => res.json())
       .then(data => {
-        document.getElementById("price").innerHTML = `Live XRP Price: <span class="text-green-400">$${data.ripple.usd}</span>`;
+        document.getElementById("price").innerHTML =
+          `Live XRP Price: <span class="text-green-400">$${data.ripple.usd}</span>`;
       });
 
-    // 24h XRP chart
+    // 24hr XRP chart
     fetch("https://api.coingecko.com/api/v3/coins/ripple/market_chart?vs_currency=usd&days=1&interval=hourly")
       .then(res => res.json())
       .then(data => {
         const ctx = document.getElementById('xrpChart').getContext('2d');
         const labels = data.prices.map(p => {
-          const date = new Date(p[0]);
-          return date.getHours() + ":00";
+          const d = new Date(p[0]);
+          return d.getHours().toString().padStart(2, '0') + ":00";
         });
-        const values = data.prices.map(p => p[1]);
+        const values = data.prices.map(p => parseFloat(p[1].toFixed(3)));
 
         new Chart(ctx, {
           type: 'line',
           data: {
             labels,
             datasets: [{
-              label: 'XRP/USD - 24h',
+              label: 'XRP/USD (24h)',
               data: values,
               borderColor: 'rgba(59, 130, 246, 1)',
-              backgroundColor: 'rgba(59, 130, 246, 0.2)',
+              backgroundColor: 'rgba(59, 130, 246, 0.1)',
               tension: 0.3,
-              pointRadius: 2
+              pointRadius: 1
             }]
           },
           options: {
             responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+              x: {
+                ticks: { color: '#ccc' }
+              },
+              y: {
+                ticks: { color: '#ccc' }
+              }
+            },
             plugins: {
               legend: { labels: { color: '#fff' } }
-            },
-            scales: {
-              x: { ticks: { color: '#ccc' } },
-              y: { ticks: { color: '#ccc' } }
             }
           }
         });
