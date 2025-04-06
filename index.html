@@ -46,12 +46,12 @@
         }
       };
 
-      // Live XRP Price using Coinpaprika
-      fetchWithRetry("https://api.coinpaprika.com/v1/tickers/xrp-ripple", {
+      // Live XRP Price using CoinGecko
+      fetchWithRetry("https://api.coingecko.com/api/v3/simple/price?ids=ripple&vs_currencies=usd", {
         headers: { "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36" }
       })
         .then(data => {
-          const price = data.quotes.USD.price.toFixed(3);
+          const price = data.ripple.usd.toFixed(3);
           document.getElementById("price").innerHTML =
             `Live XRP Price: <span class="text-green-400">$${price}</span>`;
         })
@@ -61,22 +61,22 @@
           console.error("Price Error:", err);
         });
 
-      // 24hr XRP Chart using Coinpaprika
-      const endDate = new Date();
-      const startDate = new Date(endDate.getTime() - 24 * 60 * 60 * 1000); // 24 hours ago
-      const formatDate = (date) => date.toISOString().split('T')[0]; // YYYY-MM-DD format
+      // 24hr XRP Chart using CoinCap
+      const endTime = Date.now();
+      const startTime = endTime - 24 * 60 * 60 * 1000; // 24 hours ago in milliseconds
 
-      fetchWithRetry(`https://api.coinpaprika.com/v1/coins/xrp-ripple/ohlcv/historical?start=${formatDate(startDate)}&end=${formatDate(endDate)}`, {
+      fetchWithRetry(`https://api.coincap.io/v2/assets/ripple/history?interval=h1&start=${startTime}&end=${endTime}`, {
         headers: { "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36" }
       })
-        .then(data => {
+        .then(response => {
+          const data = response.data; // CoinCap nests the data in a "data" property
           console.log("Chart Data:", data);
           const ctx = document.getElementById('xrpChart').getContext('2d');
           const labels = data.map(d => {
-            const date = new Date(d.time_open);
+            const date = new Date(parseInt(d.time));
             return date.getHours().toString().padStart(2, '0') + ":00";
           });
-          const values = data.map(d => parseFloat(d.close.toFixed(3)));
+          const values = data.map(d => parseFloat(d.priceUsd).toFixed(3));
 
           if (!labels.length || !values.length) {
             throw new Error("No data available for the chart");
