@@ -47,10 +47,18 @@
 
       const priceElement = document.getElementById("price");
 
-      fetchWithRetry("https://api.coingecko.com/api/v3/simple/price?ids=ripple&vs_currencies=usd")
+      fetchWithRetry("https://api.coingecko.com/api/v3/coins/ripple/market_chart?vs_currency=usd&days=1")
         .then(data => {
-          const price = data.ripple.usd.toFixed(3);
-          priceElement.innerHTML = `Live XRP Price: <span class="text-green-400">$${price}</span>`;
+          const prices = data.prices;
+          const current = prices[prices.length - 1][1];
+          const start = prices[0][1];
+          const isUp = current > start;
+          const arrow = isUp ? '▲' : '▼';
+          const color = isUp ? 'text-green-400' : 'text-red-400';
+          const percentChange = (((current - start) / start) * 100).toFixed(2);
+          const tooltip = `24h Change: ${percentChange}%`;
+          const priceDisplay = `$${current.toFixed(3)} <span class='${color} ml-1' title='${tooltip}'>${arrow}</span>`;
+          document.getElementById("price").innerHTML = `XRP: <span class="${color}">${priceDisplay}</span>`;
         })
         .catch(err => {
           priceElement.innerHTML = `Live XRP Price: <span class="text-red-400 flash">Offline</span>`;
