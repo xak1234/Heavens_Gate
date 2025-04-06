@@ -105,7 +105,7 @@
         const recentValues = values.slice(-4);
         const startPrice = recentValues[0];
         const endPrice = recentValues[recentValues.length - 1];
-        const trendColor = endPrice > startPrice ? '#00FF00' : '#FF5555'; // Red for downtrend
+        const trendColor = endPrice > startPrice ? '#00FF00' : '#FF5555';
 
         new Chart(ctx, {
           type: 'line',
@@ -115,10 +115,10 @@
               label,
               data: values,
               borderColor: trendColor,
-              backgroundColor: trendColor + '55', // Semi-transparent fill
-              fill: true, // Fill the area under the line
-              tension: 0.1, // Slightly smoother line
-              pointRadius: 0, // No points on the line
+              backgroundColor: trendColor + '55',
+              fill: true,
+              tension: 0.1,
+              pointRadius: 0,
               borderWidth: 2
             }]
           },
@@ -143,7 +143,7 @@
                 ticks: {
                   color: '#ccc',
                   callback: function(value) {
-                    return '$' + value.toFixed(2); // Add $ to y-axis labels
+                    return '$' + value.toFixed(2);
                   },
                   font: {
                     size: 10
@@ -156,7 +156,7 @@
             },
             plugins: {
               legend: {
-                display: false // Hide the legend
+                display: false
               }
             },
             animation: {
@@ -181,7 +181,7 @@
               hour: 'numeric',
               minute: '2-digit',
               hour12: true
-            }).toUpperCase(); // Format like "12:00 AM"
+            }).toUpperCase();
           });
           const values = data.map(d => parseFloat(d.priceUsd));
           if (!labels.length || !values.length) throw new Error("No data available");
@@ -199,7 +199,7 @@
                   hour: 'numeric',
                   minute: '2-digit',
                   hour12: true
-                }).toUpperCase(); // Format like "12:00 AM"
+                }).toUpperCase();
               });
               const values = data.map(d => parseFloat(d[4]));
               if (!labels.length || !values.length) throw new Error("No data available");
@@ -226,7 +226,7 @@
             });
         });
 
-      fetch("Data/adoption-signals.json")
+      fetch(`Data/adoption-signals.json?ts=${new Date().getTime()}`)
         .then(res => res.json())
         .then(signals => {
           const container = document.getElementById("signals");
