@@ -31,8 +31,6 @@
 
   <script>
     document.addEventListener("DOMContentLoaded", () => {
-      const apiKey = "YOUR_API_KEY_HERE"; // Replace with your CoinGecko API key or leave as "" for public access
-
       // Function to fetch with retry mechanism
       const fetchWithRetry = async (url, options, retries = 3, delay = 2000) => {
         for (let i = 0; i < retries; i++) {
@@ -48,16 +46,14 @@
         }
       };
 
-      // Live XRP Price
-      fetchWithRetry("https://api.coingecko.com/api/v3/simple/price?ids=ripple&vs_currencies=usd", {
-        headers: {
-          "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
-          ...(apiKey && { "X-Cg-Demo-Api-Key": apiKey })
-        }
+      // Live XRP Price using Coinpaprika
+      fetchWithRetry("https://api.coinpaprika.com/v1/tickers/xrp-ripple", {
+        headers: { "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36" }
       })
         .then(data => {
+          const price = data.quotes.USD.price.toFixed(3);
           document.getElementById("price").innerHTML =
-            `Live XRP Price: <span class="text-green-400">$${data.ripple.usd}</span>`;
+            `Live XRP Price: <span class="text-green-400">$${price}</span>`;
         })
         .catch(err => {
           document.getElementById("price").innerHTML =
@@ -65,21 +61,22 @@
           console.error("Price Error:", err);
         });
 
-      // 24hr XRP Chart
-      fetchWithRetry("https://api.coingecko.com/api/v3/coins/ripple/market_chart?vs_currency=usd&days=1&interval=hourly", {
-        headers: {
-          "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
-          ...(apiKey && { "X-Cg-Demo-Api-Key": apiKey })
-        }
+      // 24hr XRP Chart using Coinpaprika
+      const endDate = new Date();
+      const startDate = new Date(endDate.getTime() - 24 * 60 * 60 * 1000); // 24 hours ago
+      const formatDate = (date) => date.toISOString().split('T')[0]; // YYYY-MM-DD format
+
+      fetchWithRetry(`https://api.coinpaprika.com/v1/coins/xrp-ripple/ohlcv/historical?start=${formatDate(startDate)}&end=${formatDate(endDate)}`, {
+        headers: { "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36" }
       })
         .then(data => {
           console.log("Chart Data:", data);
           const ctx = document.getElementById('xrpChart').getContext('2d');
-          const labels = data.prices.map(p => {
-            const d = new Date(p[0]);
-            return d.getHours().toString().padStart(2, '0') + ":00";
+          const labels = data.map(d => {
+            const date = new Date(d.time_open);
+            return date.getHours().toString().padStart(2, '0') + ":00";
           });
-          const values = data.prices.map(p => parseFloat(p[1].toFixed(3)));
+          const values = data.map(d => parseFloat(d.close.toFixed(3)));
 
           if (!labels.length || !values.length) {
             throw new Error("No data available for the chart");
@@ -113,7 +110,7 @@
           console.error("Chart Error:", err);
           // Clear the chart container and show mock chart
           const chartContainer = document.getElementById("chartContainer");
-          chartContainer.innerHTML = ''; // Clear previous content
+          chartContainer.innerHTML = '';
           const ctx = document.createElement('canvas');
           ctx.id = 'xrpChart';
           ctx.className = 'bg-gray-800 rounded shadow w-full';
