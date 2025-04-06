@@ -61,17 +61,52 @@
           console.error("Price Error:", err);
         });
 
-      // 24hr XRP Chart using CoinCap
+      // 24hr XRP Chart using CoinCap, with fallback to KuCoin
       const endTime = Date.now();
       const startTime = endTime - 24 * 60 * 60 * 1000; // 24 hours ago in milliseconds
 
+      const renderChart = (labels, values, label) => {
+        const ctx = document.getElementById('xrpChart').getContext('2d');
+
+        // Determine the trend over the last 4 hours
+        const fourHoursInPoints = 4; // Since we have hourly data, 4 hours = 4 data points
+        const recentValues = values.slice(-fourHoursInPoints); // Last 4 hours of data
+        const startPrice = recentValues[0];
+        const endPrice = recentValues[recentValues.length - 1];
+        const trendColor = endPrice > startPrice ? '#00FF00' : '#FF0000'; // Green for up, red for down
+
+        new Chart(ctx, {
+          type: 'line',
+          data: {
+            labels,
+            datasets: [{
+              label: label,
+              data: values,
+              borderColor: trendColor,
+              backgroundColor: trendColor + '33', // Add some transparency for the fill
+              tension: 0.3,
+              pointRadius: 1
+            }]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+              x: { ticks: { color: '#ccc' } },
+              y: { ticks: { color: '#ccc' } }
+            },
+            plugins: { legend: { labels: { color: '#fff' } } }
+          }
+        });
+      };
+
+      // Try CoinCap first
       fetchWithRetry(`https://api.coincap.io/v2/assets/ripple/history?interval=h1&start=${startTime}&end=${endTime}`, {
         headers: { "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36" }
       })
         .then(response => {
           const data = response.data; // CoinCap nests the data in a "data" property
-          console.log("Chart Data:", data);
-          const ctx = document.getElementById('xrpChart').getContext('2d');
+          console.log("CoinCap Chart Data:", data);
           const labels = data.map(d => {
             const date = new Date(parseInt(d.time));
             return date.getHours().toString().padStart(2, '0') + ":00";
@@ -82,61 +117,71 @@
             throw new Error("No data available for the chart");
           }
 
-          new Chart(ctx, {
-            type: 'line',
-            data: {
-              labels,
-              datasets: [{
-                label: 'XRP/USD (24h)',
-                data: values,
-                borderColor: 'rgba(59, 130, 246, 1)',
-                backgroundColor: 'rgba(59, 130, 246, 0.1)',
-                tension: 0.3,
-                pointRadius: 1
-              }]
-            },
-            options: {
-              responsive: true,
-              maintainAspectRatio: false,
-              scales: {
-                x: { ticks: { color: '#ccc' } },
-                y: { ticks: { color: '#ccc' } }
-              },
-              plugins: { legend: { labels: { color: '#fff' } } }
-            }
-          });
+          renderChart(labels, values, 'XRP/USD (24h)');
         })
         .catch(err => {
-          console.error("Chart Error:", err);
-          // Clear the chart container and show mock chart
-          const chartContainer = document.getElementById("chartContainer");
-          chartContainer.innerHTML = '';
-          const ctx = document.createElement('canvas');
-          ctx.id = 'xrpChart';
-          ctx.className = 'bg-gray-800 rounded shadow w-full';
-          chartContainer.appendChild(ctx);
-          const mockLabels = Array(24).fill().map((_, i) => `${i}:00`);
-          const mockValues = Array(24).fill().map(() => 0.5 + Math.random() * 0.1);
-          new Chart(ctx.getContext('2d'), {
-            type: 'line',
-            data: {
-              labels: mockLabels,
-              datasets: [{
-                label: 'XRP/USD (Mock)',
-                data: mockValues,
-                borderColor: 'rgba(59, 130, 246, 1)',
-                backgroundColor: 'rgba(59, 130, 246, 0.1)',
-                tension: 0.3,
-                pointRadius: 1
-              }]
-            },
-            options: {
-              responsive: true,
-              maintainAspectRatio: false,
-              scales: { x: { ticks: { color: '#ccc' } }, y: { ticks: { color: '#ccc' } } },
-              plugins: { legend: { labels: { color: '#fff' } } }
-            }
-          });
+          console.error("CoinCap Chart Error:", err);
+
+          // Fallback to KuCoin API
+          const startAt = Math.floor(startTime / 1000); // KuCoin uses seconds
+          const endAt = Math.floor(endTime / 1000);
+          fetchWithRetry(`https://api.kucoin.com/api/v1/market/candles?symbol=XRP-USDT&type=1hour&startAt=${startAt}&endAt=${endAt}`, {
+            headers: { "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36" }
+          })
+            .then(response => {
+              const data = response.data; // KuCoin nests the data in a "data" property
+              console.log("KuCoin Chart Data:", data);
+              const labels = data.map(d => {
+                const date = new Date(parseInt(d[0]) * 1000); // KuCoin timestamp is in seconds
+                return date.getHours().toString().padStart(2, '0') + ":00";
+              });
+              const values = data.map(d => parseFloat(d[4]).toFixed(3)); // d[4] is the closing price
+
+              if (!labels.length || !values.length) {
+                throw new Error("No data available for the chart");
+              }
+
+              renderChart(labels, values, 'XRP/USD (24h)');
+            })
+            .catch(err => {
+              console.error("KuCoin Chart Error:", err);
+              // Clear the chart container and show mock chart
+              const chartContainer = document.getElementById("chartContainer");
+              chartContainer.innerHTML = '';
+              const ctx = document.createElement('canvas');
+              ctx.id = 'xrpChart';
+              ctx.className = 'bg-gray-800 rounded shadow w-full';
+              chartContainer.appendChild(ctx);
+              const mockLabels = Array(24).fill().map((_, i) => `${i}:00`);
+              const mockValues = Array(24).fill().map(() => 0.5 + Math.random() * 0.1);
+
+              // Mock trend for the last 4 hours
+              const recentMockValues = mockValues.slice(-4);
+              const startMockPrice = recentMockValues[0];
+              const endMockPrice = recentMockValues[recentMockValues.length - 1];
+              const mockTrendColor = endMockPrice > startMockPrice ? '#00FF00' : '#FF0000';
+
+              new Chart(ctx.getContext('2d'), {
+                type: 'line',
+                data: {
+                  labels: mockLabels,
+                  datasets: [{
+                    label: 'XRP/USD (Mock)',
+                    data: mockValues,
+                    borderColor: mockTrendColor,
+                    backgroundColor: mockTrendColor + '33',
+                    tension: 0.3,
+                    pointRadius: 1
+                  }]
+                },
+                options: {
+                  responsive: true,
+                  maintainAspectRatio: false,
+                  scales: { x: { ticks: { color: '#ccc' } }, y: { ticks: { color: '#ccc' } } },
+                  plugins: { legend: { labels: { color: '#fff' } } }
+                }
+              });
+            });
         });
 
       // Adoption Signals
@@ -159,4 +204,4 @@
     });
   </script>
 </body>
-</html>
+  </html>
