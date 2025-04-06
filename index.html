@@ -7,7 +7,7 @@
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
-<body class="flex flex-col items-center justify-center p-6 space-y-6">
+<body class="flex flex-col items-center justify-center min-h-screen p-6 space-y-6">
 
   <h1 class="text-4xl font-bold text-blue-400 text-center">Heaven's Gate</h1>
 
@@ -15,9 +15,9 @@
     Live XRP Price: <span class="text-green-400">Loading...</span>
   </div>
 
-  <div class="w-full max-w-2xl">
+  <div class="w-full max-w-2xl h-64"> <!-- Added h-64 to constrain height -->
     <h2 class="text-xl font-semibold mb-2 text-center">24h XRP Price Trend</h2>
-    <canvas id="xrpChart" class="bg-gray-800 rounded shadow w-full" style="height: 16rem;"></canvas>
+    <canvas id="xrpChart" class="bg-gray-800 rounded shadow w-full"></canvas> <!-- Removed inline height -->
   </div>
 
   <div class="w-full max-w-2xl">
@@ -29,7 +29,6 @@
 
   <script>
     document.addEventListener("DOMContentLoaded", () => {
-      // Optional: Add your CoinGecko API key here if you have one
       const apiKey = "YOUR_API_KEY_HERE"; // Replace with your key or leave as "" for public access
 
       // Live XRP Price
@@ -106,12 +105,11 @@
           document.getElementById("xrpChart").replaceWith(
             `<p class="text-red-400 text-center">Failed to load chart: ${err.message}</p>`
           );
-          // Fallback: Mock data to test chart rendering
+          // Fallback: Mock data
           const ctx = document.createElement('canvas');
           ctx.id = 'xrpChart';
           ctx.className = 'bg-gray-800 rounded shadow w-full';
-          ctx.style.height = '16rem';
-          document.querySelector('.max-w-2xl').appendChild(ctx);
+          document.querySelector('.max-w-2xl.h-64').appendChild(ctx);
           const mockLabels = Array(24).fill().map((_, i) => `${i}:00`);
           const mockValues = Array(24).fill().map(() => 0.5 + Math.random() * 0.1);
           new Chart(ctx.getContext('2d'), {
@@ -136,7 +134,7 @@
           });
         });
 
-      // Adoption Signals (unchanged for brevity)
+      // Adoption Signals
       fetch("Data/adoption-signals.json")
         .then(res => { if (!res.ok) throw new Error("Signals API failed"); return res.json(); })
         .then(signals => {
@@ -156,4 +154,4 @@
     });
   </script>
 </body>
-</html>
+  </html>
