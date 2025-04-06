@@ -26,8 +26,11 @@
     <h2 class="text-xl font-semibold text-white mt-4 mb-2">Adoption Signals</h2>
     <div id="signals" class="space-y-3">
       <!-- Signals go here -->
-    </div>
-  </div>  <script>
+    </div>  <div class="w-full max-w-xl mt-4">
+    <h2 class="text-md font-semibold text-white mb-2">XRP Investment Simulator</h2>
+    <input type="number" id="investmentInput" maxlength="5" placeholder="Enter amount (max 5 digits)" class="w-full p-2 rounded bg-gray-700 text-white text-center text-sm mb-2" />
+    <div id="investmentOutput" class="bg-gray-800 text-sm text-center p-3 rounded shadow">Investment value will appear here...</div>
+  </div><script>
     document.addEventListener("DOMContentLoaded", () => {
       const fetchWithRetry = async (url, options, retries = 3, delay = 2000) => {
         for (let i = 0; i < retries; i++) {
@@ -57,8 +60,21 @@
           const color = isUp ? 'text-green-400' : 'text-red-400';
           const percentChange = (((current - start) / start) * 100).toFixed(2);
           const tooltip = `24h Change: ${percentChange}%`;
-          const priceDisplay = `$${current.toFixed(3)} <span class='${color} ml-1' title='${tooltip}'>${arrow}</span>`;
+          const priceDisplay = `$${current.toFixed(3)} <span class='${color} ml-1' title='${tooltip}' class='text-xs ml-1 align-middle'>24h ${arrow}</span>`;
           document.getElementById("price").innerHTML = `XRP: <span class="${color}">${priceDisplay}</span>`;
+          const input = document.getElementById("investmentInput");
+          const output = document.getElementById("investmentOutput");
+          if (input && output) {
+            input.addEventListener("input", () => {
+              const val = parseInt(input.value);
+              if (!isNaN(val) && val > 0 && val <= 99999) {
+                const calculated = ((val / current) * 300).toFixed(2);
+                output.innerText = `If XRP reaches $300, your investment would be worth: $${calculated}`;
+              } else {
+                output.innerText = "Please enter a valid number up to 5 digits.";
+              }
+            });
+          }
         })
         .catch(err => {
           priceElement.innerHTML = `Live XRP Price: <span class="text-red-400 flash">Offline</span>`;
@@ -174,4 +190,4 @@
         });
     });
   </script></body>
-</html>
+  </html>
