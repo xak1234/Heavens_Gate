@@ -2,31 +2,31 @@
     {
         "signal": "EU's MiCA Regulation Enacted",
         "status": "\u2705 Enacted",
-        "date_updated": "2025-04-06",
+        "date": "2025-04-06",
         "details": "MiCA fully came into force on December 30, 2024, creating a unified EU crypto framework."
     },
     {
         "signal": "XRP ETF Proposals",
         "status": "\ud83d\udd52 Under Review",
-        "date_updated": "2025-04-06",
+        "date": "2025-04-06",
         "details": "Multiple applications filed in 2025; SEC decisions expected by October 2025."
     },
     {
         "signal": "U.S. Crypto Legislation (FIT21)",
         "status": "\ud83d\udd52 In Progress",
-        "date_updated": "2025-04-06",
+        "date": "2025-04-06",
         "details": "Passed House in May 2024; awaiting Senate review and approval."
     },
     {
         "signal": "Ripple's FCA Registration (UK)",
         "status": "\ud83d\udd52 Pending",
-        "date_updated": "2025-04-06",
+        "date": "2025-04-06",
         "details": "Ripple applied for FCA crypto asset registration; awaiting decision."
     },
     {
         "signal": "Ripple's Payment License in Ireland",
         "status": "\ud83d\udd52 In Progress",
-        "date_updated": "2025-04-06",
+        "date": "2025-04-06",
         "details": "Ripple pursuing a payment institution license as part of UK/EU expansion."
     }
 ]
