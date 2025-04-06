@@ -7,9 +7,6 @@
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <style>
-    body {
-      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-    }
     .flash {
       animation: flash 0.5s ease-in-out 2;
     }
@@ -17,92 +14,274 @@
       0%, 100% { background-color: transparent; }
       50% { background-color: rgba(255, 0, 0, 0.2); }
     }
-    .invest-banner {
-      color: white;
-      font-size: 10px;
-      text-align: center;
-      transition: all 0.2s ease-in-out;
-      cursor: pointer;
-      margin-top: 10px;
-    }
-    .invest-banner:hover {
-      font-size: 16px;
-      font-weight: bold;
-      text-shadow: 0 0 8px white;
-    }
-    .card {
-      background: linear-gradient(145deg, #1e293b, #0f172a);
-      border-radius: 1rem;
-      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
-      padding: 1.5rem;
-      transition: transform 0.3s ease;
-    }
-    .card:hover {
-      transform: translateY(-5px);
-    }
   </style>
 </head>
-<body class="flex flex-col items-center justify-start min-h-screen pt-4 px-4 space-y-6 text-center bg-gradient-to-b from-gray-900 to-gray-800">
-  <h1 class="text-5xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-purple-600 drop-shadow-lg">Heaven's Gate</h1>
-
+<body class="flex flex-col items-center justify-start min-h-screen pt-4 px-4 space-y-6 text-center">
+  <h1 class="text-4xl font-bold text-blue-400">Heaven's Gate</h1>
   <div id="price" class="text-2xl">
     XRP: <span class="text-green-400">Loading...</span>
   </div>
-
   <div class="w-full max-w-xl">
     <h2 class="text-lg font-semibold mb-2">24h XRP Price Trend</h2>
     <div id="chartContainer" class="flex justify-center">
       <canvas id="xrpChart" class="bg-gray-800 rounded shadow w-full h-32"></canvas>
     </div>
   </div>
-
   <div class="w-full max-w-xl">
-    <h2 class="text-md font-bold text-green-400 mt-2 mb-1 font-mono tracking-wider">FINANCIAL REGULATORY ADOPTION SIGNALS (LIVE)</h2>
+    <h2 class="text-md font-bold text-green-400 mt-2 mb-1 font-mono">FINANCIAL REGULATORY ADOPTION SIGNALS (LIVE)</h2>
     <div id="signals" class="space-y-3">
       <!-- Signals go here -->
     </div>
   </div>
-
   <div class="w-full max-w-xl mt-4">
     <h2 class="text-md font-semibold text-white mb-2">XRP Investment Simulator</h2>
-    <div class='card'>
-      <input type="number" id="investmentInput" maxlength="5" value="1000" placeholder="Enter amount (max £99999)" class="w-full p-2 rounded bg-gray-700 text-white text-center text-sm mb-2 shadow-inner" />
-      <div id="investmentOutput" class="bg-blue-800 text-sm text-center p-3 rounded shadow text-blue-300 font-semibold">Click the value below to see your future worth</div>
-    </div>
-    <div class="flex flex-wrap gap-2 justify-center mt-4">
-      <button onclick="updateInvestmentOutput(5);" class="px-4 py-2 bg-green-600 hover:bg-green-700 text-white text-sm rounded shadow">Set XRP to $5</button>
-      <button onclick="updateInvestmentOutput(10);" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm rounded shadow">Set XRP to $10</button>
-      <button onclick="updateInvestmentOutput(50);" class="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white text-sm rounded shadow">Set XRP to $50</button>
-      <button onclick="updateInvestmentOutput(100);" class="px-4 py-2 bg-pink-600 hover:bg-pink-700 text-white text-sm rounded shadow">Set XRP to $100</button>
-      <button onclick="updateInvestmentOutput(300);" class="px-4 py-2 bg-red-600 hover:bg-red-700 text-white text-sm rounded shadow">Set XRP to $300</button>
+    <div class='bg-blue-900 p-4 rounded'>
+      <input type="number" id="investmentInput" maxlength="5" value="1000" placeholder="Enter amount (max £99999)" class="w-full p-2 rounded bg-gray-700 text-white text-center text-sm mb-2" />
+      <div id="investmentOutput" class="bg-blue-800 text-sm text-center p-3 rounded shadow text-blue-300 font-semibold">Investment value will appear here...</div>
     </div>
   </div>
-
   <script>
-    let currentXRPPrice = 1.67; // Default fallback, will update dynamically
-
-    function updateInvestmentOutput(futurePrice) {
-      const inputElement = document.getElementById("investmentInput");
-      const output = document.getElementById("investmentOutput");
-      const val = parseFloat(inputElement.value);
-      if (!isNaN(val) && val > 0 && val <= 99999) {
-        let xrpHeld = val / currentXRPPrice;
-        const futureValue = (xrpHeld * futurePrice).toFixed(2);
-        output.innerText = `Click the value below to see your future worth: £${futureValue}`;
-      } else {
-        output.innerText = "Please enter a valid number up to 5 digits.";
-      }
-    }
-
-    // Update currentXRPPrice when price data is fetched
     document.addEventListener("DOMContentLoaded", () => {
-      fetch("https://api.coingecko.com/api/v3/simple/price?ids=ripple&vs_currencies=gbp")
-        .then(res => res.json())
+      const fetchWithRetry = async (url, options, retries = 3, delay = 2000) => {
+        for (let i = 0; i < retries; i++) {
+          try {
+            const res = await fetch(url, options);
+            if (!res.ok) throw new Error(`API failed with status: ${res.status}`);
+            return await res.json();
+          } catch (err) {
+            if (i === retries - 1) throw err;
+            await new Promise(resolve => setTimeout(resolve, delay));
+          }
+        }
+      };
+      const autoRefresh = () => location.reload();
+      setInterval(autoRefresh, 5 * 60 * 1000);
+
+      const priceElement = document.getElementById("price");
+
+      const updateInvestmentOutput = (currentPrice, inputValue) => {
+        const output = document.getElementById("investmentOutput");
+        const val = parseInt(inputValue);
+        if (!isNaN(val) && val > 0 && val <= 99999) {
+          const calculated = (((val / currentPrice) * 300) * 0.78).toFixed(2);
+          output.innerText = `If XRP reaches $300, your investment would be worth: £${calculated}`;
+        } else {
+          output.innerText = "Please enter a valid number up to 5 digits.";
+        }
+      };
+
+      fetchWithRetry("https://api.coingecko.com/api/v3/coins/ripple/market_chart?vs_currency=usd&days=1")
         .then(data => {
-          currentXRPPrice = data.ripple.gbp;
+          const prices = data.prices;
+          const current = prices[prices.length - 1][1];
+          const start = prices[0][1];
+          const isUp = current > start;
+          const arrow = isUp ? '▲' : '▼';
+          const color = isUp ? 'text-green-400' : 'text-red-400';
+          const percentChange = (((current - start) / start) * 100).toFixed(2);
+          const tooltip = `24h Change: ${percentChange}%`;
+          const priceDisplay = `$${current.toFixed(3)} <span class='${color} ml-1' title='${tooltip}' class='text-xs ml-1 align-middle'>24h ${arrow}</span>`;
+          document.getElementById("price").innerHTML = `XRP: <span class="${color}">${priceDisplay}</span>`;
+          
+          const input = document.getElementById("investmentInput");
+          const output = document.getElementById("investmentOutput");
+          if (input && output) {
+            updateInvestmentOutput(current, input.value);
+            input.addEventListener("input", () => {
+              updateInvestmentOutput(current, input.value);
+            });
+          }
         })
-        .catch(err => console.error("Failed to fetch current XRP price:", err));
+        .catch(err => {
+          priceElement.innerHTML = `Live XRP Price: <span class="text-red-400 flash">Offline</span>`;
+          priceElement.classList.add("flash");
+        });
+
+      const endTime = Date.now();
+      const startTime = endTime - 24 * 60 * 60 * 1000;
+
+      const renderChart = (labels, values, label, isMock = false) => {
+        const ctx = document.getElementById('xrpChart').getContext('2d');
+        const recentValues = values.slice(-4);
+        const startPrice = recentValues[0];
+        const endPrice = recentValues[recentValues.length - 1];
+        const trendColor = endPrice > startPrice ? '#00FF00' : '#FF5555';
+
+        new Chart(ctx, {
+          type: 'line',
+          data: {
+            labels,
+            datasets: [{
+              label,
+              data: values,
+              borderColor: trendColor,
+              backgroundColor: trendColor + '55',
+              fill: true,
+              tension: 0.1,
+              pointRadius: 0,
+              borderWidth: 2
+            }]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+              x: {
+                ticks: {
+                  color: '#ccc',
+                  maxRotation: 45,
+                  minRotation: 45,
+                  font: {
+                    size: 10
+                  }
+                },
+                grid: {
+                  color: 'rgba(255, 255, 255, 0.1)'
+                }
+              },
+              y: {
+                ticks: {
+                  color: '#ccc',
+                  callback: function(value) {
+                    return '$' + value.toFixed(2);
+                  },
+                  font: {
+                    size: 10
+                  }
+                },
+                grid: {
+                  color: 'rgba(255, 255, 255, 0.1)'
+                }
+              }
+            },
+            plugins: {
+              legend: {
+                display: false
+              }
+            },
+            animation: {
+              duration: 1000,
+              easing: 'easeOutQuart'
+            },
+            elements: {
+              line: {
+                borderWidth: 2
+              }
+            }
+          }
+        });
+      };
+
+      fetchWithRetry(`https://api.coincap.io/v2/assets/ripple/history?interval=h1&start=${startTime}&end=${endTime}`)
+        .then(response => {
+          const data = response.data;
+          const labels = data.map(d => {
+            const date = new Date(parseInt(d.time));
+            return date.toLocaleString('en-US', {
+              hour: 'numeric',
+              minute: '2-digit',
+              hour12: true
+            }).toUpperCase();
+          });
+          const values = data.map(d => parseFloat(d.priceUsd));
+          if (!labels.length || !values.length) throw new Error("No data available");
+          renderChart(labels, values, 'XRP/USD (24h)');
+        })
+        .catch(() => {
+          const startAt = Math.floor(startTime / 1000);
+          const endAt = Math.floor(endTime / 1000);
+          fetchWithRetry(`https://api.kucoin.com/api/v1/market/candles?symbol=XRP-USDT&type=1hour&startAt=${startAt}&endAt=${endAt}`)
+            .then(response => {
+              const data = response.data;
+              const labels = data.map(d => {
+                const date = new Date(parseInt(d[0]) * 1000);
+                return date.toLocaleString('en-US', {
+                  hour: 'numeric',
+                  minute: '2-digit',
+                  hour12: true
+                }).toUpperCase();
+              });
+              const values = data.map(d => parseFloat(d[4]));
+              if (!labels.length || !values.length) throw new Error("No data available");
+              renderChart(labels, values, 'XRP/USD (24h)');
+            })
+            .catch(() => {
+              const chartContainer = document.getElementById("chartContainer");
+              chartContainer.innerHTML = '';
+              const ctx = document.createElement('canvas');
+              ctx.id = 'xrpChart';
+              ctx.className = 'bg-gray-800 rounded shadow w-full h-32';
+              chartContainer.appendChild(ctx);
+              const now = new Date();
+              const mockLabels = Array(24).fill().map((_, i) => {
+                const date = new Date(now.getTime() - (23 - i) * 60 * 60 * 1000);
+                return date.toLocaleString('en-US', {
+                  hour: 'numeric',
+                  minute: '2-digit',
+                  hour12: true
+                }).toUpperCase();
+              });
+              const mockValues = Array(24).fill().map(() => 0.5 + Math.random() * 0.1);
+              renderChart(mockLabels, mockValues, 'XRP/USD (Mock)', true);
+            });
+        });
+
+      fetch(`Data/adoption-signals.json?ts=${new Date().getTime()}`)
+        .then(res => res.json())
+        .then(signals => {
+          const container = document.getElementById("signals");
+          signals.forEach(signal => {
+            const div = document.createElement("div");
+            div.className = "bg-gray-800 p-3 rounded shadow text-sm text-green-400 font-bold font-mono";
+            div.innerHTML = `<strong>${signal.date.toUpperCase()}</strong>: ${signal.message.toUpperCase()}`;
+            container.appendChild(div);
+          });
+        })
+        .catch(err => {
+          document.getElementById("signals").innerHTML =
+            `<p class="text-red-400">Failed to load signals: ${err.message}</p>`;
+        });
     });
   </script>
 </body>
 </html>
+
+
+
+[
+    {
+        "message": "EU's MiCA Regulation Enacted",
+        "status": "\u2705 Enacted",
+        "date": "2025-04-06",
+        "details": "MiCA fully came into force on December 30, 2024, creating a unified EU crypto framework.",
+        "color": "green"
+    },
+    {
+        "message": "XRP ETF Proposals",
+        "status": "\ud83d\udd52 Under Review",
+        "date": "2025-04-06",
+        "details": "Multiple applications filed in 2025; SEC decisions expected by October 2025.",
+        "color": "white"
+    },
+    {
+        "message": "U.S. Crypto Legislation (FIT21)",
+        "status": "\ud83d\udd52 In Progress",
+        "date": "2025-04-06",
+        "details": "Passed House in May 2024; awaiting Senate review and approval.",
+        "color": "white"
+    },
+    {
+        "message": "Ripple's FCA Registration (UK)",
+        "status": "\ud83d\udd52 Pending",
+        "date": "2025-04-06",
+        "details": "Ripple applied for FCA crypto asset registration; awaiting decision.",
+        "color": "white"
+    },
+    {
+        "message": "Ripple's Payment License in Ireland",
+        "status": "\ud83d\udd52 In Progress",
+        "date": "2025-04-06",
+        "details": "Ripple pursuing a payment institution license as part of UK/EU expansion.",
+        "color": "white"
+    }
+]
