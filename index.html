@@ -105,7 +105,7 @@
         const recentValues = values.slice(-4);
         const startPrice = recentValues[0];
         const endPrice = recentValues[recentValues.length - 1];
-        const trendColor = endPrice > startPrice ? '#00FF00' : '#FF0000';
+        const trendColor = endPrice > startPrice ? '#00FF00' : '#FF5555'; // Red for downtrend
 
         new Chart(ctx, {
           type: 'line',
@@ -115,27 +115,58 @@
               label,
               data: values,
               borderColor: trendColor,
-              backgroundColor: trendColor + '33',
-              tension: 0.4,
-              pointRadius: 1
+              backgroundColor: trendColor + '55', // Semi-transparent fill
+              fill: true, // Fill the area under the line
+              tension: 0.1, // Slightly smoother line
+              pointRadius: 0, // No points on the line
+              borderWidth: 2
             }]
           },
           options: {
             responsive: true,
             maintainAspectRatio: false,
             scales: {
-              x: { ticks: { color: '#ccc' } },
-              y: { ticks: { color: '#ccc' } }
+              x: {
+                ticks: {
+                  color: '#ccc',
+                  maxRotation: 45,
+                  minRotation: 45,
+                  font: {
+                    size: 10
+                  }
+                },
+                grid: {
+                  color: 'rgba(255, 255, 255, 0.1)'
+                }
+              },
+              y: {
+                ticks: {
+                  color: '#ccc',
+                  callback: function(value) {
+                    return '$' + value.toFixed(2); // Add $ to y-axis labels
+                  },
+                  font: {
+                    size: 10
+                  }
+                },
+                grid: {
+                  color: 'rgba(255, 255, 255, 0.1)'
+                }
+              }
             },
             plugins: {
               legend: {
-                display: !isMock,
-                labels: { color: '#fff' }
+                display: false // Hide the legend
               }
             },
             animation: {
               duration: 1000,
               easing: 'easeOutQuart'
+            },
+            elements: {
+              line: {
+                borderWidth: 2
+              }
             }
           }
         });
@@ -146,11 +177,13 @@
           const data = response.data;
           const labels = data.map(d => {
             const date = new Date(parseInt(d.time));
-            return date.toLocaleString('en-GB', {
-              hour: '2-digit', minute: '2-digit', day: '2-digit', month: '2-digit'
-            });
+            return date.toLocaleString('en-US', {
+              hour: 'numeric',
+              minute: '2-digit',
+              hour12: true
+            }).toUpperCase(); // Format like "12:00 AM"
           });
-          const values = data.map(d => parseFloat(d.priceUsd).toFixed(3));
+          const values = data.map(d => parseFloat(d.priceUsd));
           if (!labels.length || !values.length) throw new Error("No data available");
           renderChart(labels, values, 'XRP/USD (24h)');
         })
@@ -162,11 +195,13 @@
               const data = response.data;
               const labels = data.map(d => {
                 const date = new Date(parseInt(d[0]) * 1000);
-                return date.toLocaleString('en-GB', {
-                  hour: '2-digit', minute: '2-digit', day: '2-digit', month: '2-digit'
-                });
+                return date.toLocaleString('en-US', {
+                  hour: 'numeric',
+                  minute: '2-digit',
+                  hour12: true
+                }).toUpperCase(); // Format like "12:00 AM"
               });
-              const values = data.map(d => parseFloat(d[4]).toFixed(3));
+              const values = data.map(d => parseFloat(d[4]));
               if (!labels.length || !values.length) throw new Error("No data available");
               renderChart(labels, values, 'XRP/USD (24h)');
             })
@@ -180,9 +215,11 @@
               const now = new Date();
               const mockLabels = Array(24).fill().map((_, i) => {
                 const date = new Date(now.getTime() - (23 - i) * 60 * 60 * 1000);
-                return date.toLocaleString('en-GB', {
-                  hour: '2-digit', minute: '2-digit', day: '2-digit', month: '2-digit'
-                });
+                return date.toLocaleString('en-US', {
+                  hour: 'numeric',
+                  minute: '2-digit',
+                  hour12: true
+                }).toUpperCase();
               });
               const mockValues = Array(24).fill().map(() => 0.5 + Math.random() * 0.1);
               renderChart(mockLabels, mockValues, 'XRP/USD (Mock)', true);
