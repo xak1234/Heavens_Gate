@@ -28,12 +28,19 @@
   </div>
 
   <script>
-    // Wrap everything in DOMContentLoaded to ensure DOM is ready
     document.addEventListener("DOMContentLoaded", () => {
+      // Optional: Add your CoinGecko API key here if you have one
+      const apiKey = "YOUR_API_KEY_HERE"; // Replace with your key or leave as "" for public access
+
       // Live XRP Price
-      fetch("https://api.coingecko.com/api/v3/simple/price?ids=ripple&vs_currencies=usd")
+      fetch("https://api.coingecko.com/api/v3/simple/price?ids=ripple&vs_currencies=usd", {
+        headers: {
+          "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+          ...(apiKey && { "X-Cg-Demo-Api-Key": apiKey })
+        }
+      })
         .then(res => {
-          if (!res.ok) throw new Error("Price API request failed");
+          if (!res.ok) throw new Error(`Price API failed with status: ${res.status}`);
           return res.json();
         })
         .then(data => {
@@ -47,9 +54,14 @@
         });
 
       // 24hr XRP Chart
-      fetch("https://api.coingecko.com/api/v3/coins/ripple/market_chart?vs_currency=usd&days=1&interval=hourly")
+      fetch("https://api.coingecko.com/api/v3/coins/ripple/market_chart?vs_currency=usd&days=1&interval=hourly", {
+        headers: {
+          "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+          ...(apiKey && { "X-Cg-Demo-Api-Key": apiKey })
+        }
+      })
         .then(res => {
-          if (!res.ok) throw new Error("Chart API request failed with status: " + res.status);
+          if (!res.ok) throw new Error(`Chart API failed with status: ${res.status}`);
           return res.json();
         })
         .then(data => {
@@ -94,14 +106,39 @@
           document.getElementById("xrpChart").replaceWith(
             `<p class="text-red-400 text-center">Failed to load chart: ${err.message}</p>`
           );
+          // Fallback: Mock data to test chart rendering
+          const ctx = document.createElement('canvas');
+          ctx.id = 'xrpChart';
+          ctx.className = 'bg-gray-800 rounded shadow w-full';
+          ctx.style.height = '16rem';
+          document.querySelector('.max-w-2xl').appendChild(ctx);
+          const mockLabels = Array(24).fill().map((_, i) => `${i}:00`);
+          const mockValues = Array(24).fill().map(() => 0.5 + Math.random() * 0.1);
+          new Chart(ctx.getContext('2d'), {
+            type: 'line',
+            data: {
+              labels: mockLabels,
+              datasets: [{
+                label: 'XRP/USD (Mock)',
+                data: mockValues,
+                borderColor: 'rgba(59, 130, 246, 1)',
+                backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                tension: 0.3,
+                pointRadius: 1
+              }]
+            },
+            options: {
+              responsive: true,
+              maintainAspectRatio: false,
+              scales: { x: { ticks: { color: '#ccc' } }, y: { ticks: { color: '#ccc' } } },
+              plugins: { legend: { labels: { color: '#fff' } } }
+            }
+          });
         });
 
-      // Adoption Signals
+      // Adoption Signals (unchanged for brevity)
       fetch("Data/adoption-signals.json")
-        .then(res => {
-          if (!res.ok) throw new Error("Signals API request failed");
-          return res.json();
-        })
+        .then(res => { if (!res.ok) throw new Error("Signals API failed"); return res.json(); })
         .then(signals => {
           const container = document.getElementById("signals");
           signals.forEach(signal => {
