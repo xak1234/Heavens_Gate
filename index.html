@@ -5,16 +5,25 @@
   <title>Heaven's Gate - XRP Tracker</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    .flash {
+      animation: flash 0.5s ease-in-out 2;
+    }
+    @keyframes flash {
+      0%, 100% { background-color: transparent; }
+      50% { background-color: rgba(255, 0, 0, 0.2); }
+    }
+  </style>
 </head>
-<body class="flex flex-col items-center justify-start min-h-screen pt-4 px-4 space-y-6">  <h1 class="text-4xl font-bold text-blue-400 text-center mb-2">Heaven's Gate</h1>  <div id="price" class="text-2xl text-center mb-2">
+<body class="flex flex-col items-center justify-start min-h-screen pt-4 px-4 space-y-6 text-center">  <h1 class="text-4xl font-bold text-blue-400">Heaven's Gate</h1>  <div id="price" class="text-2xl">
     Live XRP Price: <span class="text-green-400">Loading...</span>
   </div>  <div class="w-full max-w-xl">
-    <h2 class="text-lg font-semibold text-center mb-2">24h XRP Price Trend</h2>
-    <div id="chartContainer">
+    <h2 class="text-lg font-semibold mb-2">24h XRP Price Trend</h2>
+    <div id="chartContainer" class="flex justify-center">
       <canvas id="xrpChart" class="bg-gray-800 rounded shadow w-full h-32"></canvas>
     </div>
   </div>  <div class="w-full max-w-xl">
-    <h2 class="text-xl font-semibold text-white text-center mt-4 mb-2">Adoption Signals</h2>
+    <h2 class="text-xl font-semibold text-white mt-4 mb-2">Adoption Signals</h2>
     <div id="signals" class="space-y-3">
       <!-- Signals go here -->
     </div>
@@ -36,15 +45,16 @@
       const autoRefresh = () => location.reload();
       setInterval(autoRefresh, 5 * 60 * 1000);
 
+      const priceElement = document.getElementById("price");
+
       fetchWithRetry("https://api.coingecko.com/api/v3/simple/price?ids=ripple&vs_currencies=usd")
         .then(data => {
           const price = data.ripple.usd.toFixed(3);
-          document.getElementById("price").innerHTML =
-            `Live XRP Price: <span class="text-green-400">$${price}</span>`;
+          priceElement.innerHTML = `Live XRP Price: <span class="text-green-400">$${price}</span>`;
         })
         .catch(err => {
-          document.getElementById("price").innerHTML =
-            `Live XRP Price: <span class="text-red-400">Error: ${err.message}</span>`;
+          priceElement.innerHTML = `Live XRP Price: <span class="text-red-400 flash">Offline</span>`;
+          priceElement.classList.add("flash");
         });
 
       const endTime = Date.now();
@@ -95,9 +105,11 @@
         .then(response => {
           const data = response.data;
           const labels = data.map(d => {
-  const date = new Date(parseInt(d.time));
-  return date.toLocaleString('en-GB', { hour: '2-digit', minute: '2-digit', day: '2-digit', month: '2-digit' });
-});
+            const date = new Date(parseInt(d.time));
+            return date.toLocaleString('en-GB', {
+              hour: '2-digit', minute: '2-digit', day: '2-digit', month: '2-digit'
+            });
+          });
           const values = data.map(d => parseFloat(d.priceUsd).toFixed(3));
           if (!labels.length || !values.length) throw new Error("No data available");
           renderChart(labels, values, 'XRP/USD (24h)');
@@ -109,9 +121,11 @@
             .then(response => {
               const data = response.data;
               const labels = data.map(d => {
-  const date = new Date(parseInt(d[0]) * 1000);
-  return date.toLocaleString('en-GB', { hour: '2-digit', minute: '2-digit', day: '2-digit', month: '2-digit' });
-});
+                const date = new Date(parseInt(d[0]) * 1000);
+                return date.toLocaleString('en-GB', {
+                  hour: '2-digit', minute: '2-digit', day: '2-digit', month: '2-digit'
+                });
+              });
               const values = data.map(d => parseFloat(d[4]).toFixed(3));
               if (!labels.length || !values.length) throw new Error("No data available");
               renderChart(labels, values, 'XRP/USD (24h)');
@@ -124,10 +138,12 @@
               ctx.className = 'bg-gray-800 rounded shadow w-full h-32';
               chartContainer.appendChild(ctx);
               const now = new Date();
-const mockLabels = Array(24).fill().map((_, i) => {
-  const date = new Date(now.getTime() - (23 - i) * 60 * 60 * 1000);
-  return date.toLocaleString('en-GB', { hour: '2-digit', minute: '2-digit', day: '2-digit', month: '2-digit' });
-});
+              const mockLabels = Array(24).fill().map((_, i) => {
+                const date = new Date(now.getTime() - (23 - i) * 60 * 60 * 1000);
+                return date.toLocaleString('en-GB', {
+                  hour: '2-digit', minute: '2-digit', day: '2-digit', month: '2-digit'
+                });
+              });
               const mockValues = Array(24).fill().map(() => 0.5 + Math.random() * 0.1);
               renderChart(mockLabels, mockValues, 'XRP/USD (Mock)', true);
             });
@@ -146,7 +162,7 @@ const mockLabels = Array(24).fill().map((_, i) => {
         })
         .catch(err => {
           document.getElementById("signals").innerHTML =
-            `<p class="text-red-400 text-center">Failed to load signals: ${err.message}</p>`;
+            `<p class="text-red-400">Failed to load signals: ${err.message}</p>`;
         });
     });
   </script></body>
