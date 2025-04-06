@@ -5,31 +5,77 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Heaven's Gate - XRP Tracker</title>
   <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
-<body class="p-4">
+<body class="p-4 font-sans">
+
   <h1 class="text-4xl font-bold text-blue-400 mb-4">Heaven's Gate</h1>
-  <div id="price" class="text-2xl mb-4">Live XRP Price: Loading...</div>
-  <div id="signals" class="space-y-2">
-    <!-- Adoption signals will load here -->
+  <div id="price" class="text-2xl mb-4">Live XRP Price: <span class="text-green-400">Loading...</span></div>
+
+  <div class="my-6">
+    <h2 class="text-xl font-semibold mb-2">24h XRP Price Trend</h2>
+    <canvas id="xrpChart" height="200" class="w-full bg-gray-800 rounded shadow p-2"></canvas>
+  </div>
+
+  <h2 class="text-2xl font-semibold text-white mb-2">Adoption Signals</h2>
+  <div id="signals" class="space-y-3 mb-10">
+    <!-- Signals will be injected here -->
   </div>
 
   <script>
-    // Live XRP Price
+    // Live price
     fetch("https://api.coingecko.com/api/v3/simple/price?ids=ripple&vs_currencies=usd")
       .then(res => res.json())
       .then(data => {
-        document.getElementById("price").innerText = "Live XRP Price: $" + data.ripple.usd;
+        document.getElementById("price").innerHTML = `Live XRP Price: <span class="text-green-400">$${data.ripple.usd}</span>`;
+      });
+
+    // 24h XRP chart
+    fetch("https://api.coingecko.com/api/v3/coins/ripple/market_chart?vs_currency=usd&days=1&interval=hourly")
+      .then(res => res.json())
+      .then(data => {
+        const ctx = document.getElementById('xrpChart').getContext('2d');
+        const labels = data.prices.map(p => {
+          const date = new Date(p[0]);
+          return date.getHours() + ":00";
+        });
+        const values = data.prices.map(p => p[1]);
+
+        new Chart(ctx, {
+          type: 'line',
+          data: {
+            labels,
+            datasets: [{
+              label: 'XRP/USD - 24h',
+              data: values,
+              borderColor: 'rgba(59, 130, 246, 1)',
+              backgroundColor: 'rgba(59, 130, 246, 0.2)',
+              tension: 0.3,
+              pointRadius: 2
+            }]
+          },
+          options: {
+            responsive: true,
+            plugins: {
+              legend: { labels: { color: '#fff' } }
+            },
+            scales: {
+              x: { ticks: { color: '#ccc' } },
+              y: { ticks: { color: '#ccc' } }
+            }
+          }
+        });
       });
 
     // Adoption Signals
-    fetch("Data/adoption-signals.json")
+    fetch("data/adoption-signals.json")
       .then(res => res.json())
       .then(signals => {
         const container = document.getElementById("signals");
         signals.forEach(signal => {
           const div = document.createElement("div");
-          div.className = "bg-gray-800 p-2 rounded";
-          div.innerText = `${signal.date}: ${signal.message}`;
+          div.className = "bg-gray-800 p-4 rounded shadow";
+          div.innerHTML = `<strong>${signal.date}</strong>: ${signal.message}`;
           container.appendChild(div);
         });
       });
