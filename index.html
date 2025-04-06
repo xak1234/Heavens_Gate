@@ -1,5 +1,4 @@
-<!DOCTYPE html>
-<html lang="en" class="bg-gray-900 text-white">
+<!DOCTYPE html><html lang="en" class="bg-gray-900 text-white">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -7,31 +6,20 @@
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
-<body class="flex flex-col items-center justify-center min-h-screen p-6 space-y-6">
-
-  <h1 class="text-4xl font-bold text-blue-400 text-center">Heaven's Gate</h1>
-
-  <div id="price" class="text-2xl text-center">
+<body class="flex flex-col items-center justify-start min-h-screen pt-6 px-4 space-y-4">  <h1 class="text-4xl font-bold text-blue-400 text-center">Heaven's Gate</h1>  <div id="price" class="text-2xl text-center">
     Live XRP Price: <span class="text-green-400">Loading...</span>
-  </div>
-
-  <div class="w-full max-w-2xl h-64">
-    <h2 class="text-xl font-semibold mb-2 text-center">24h XRP Price Trend</h2>
+  </div>  <div class="w-full max-w-2xl">
+    <h2 class="text-xl font-semibold text-center mb-1">24h XRP Price Trend</h2>
     <div id="chartContainer">
-      <canvas id="xrpChart" class="bg-gray-800 rounded shadow w-full"></canvas>
+      <canvas id="xrpChart" class="bg-gray-800 rounded shadow w-full h-64"></canvas>
     </div>
-  </div>
-
-  <div class="w-full max-w-2xl">
-    <h2 class="text-2xl font-semibold text-white mb-2 text-center">Adoption Signals</h2>
+  </div>  <div class="w-full max-w-2xl">
+    <h2 class="text-2xl font-semibold text-white text-center mt-2 mb-1">Adoption Signals</h2>
     <div id="signals" class="space-y-3">
       <!-- Signals go here -->
     </div>
-  </div>
-
-  <script>
+  </div>  <script>
     document.addEventListener("DOMContentLoaded", () => {
-      // Function to fetch with retry mechanism
       const fetchWithRetry = async (url, options, retries = 3, delay = 2000) => {
         for (let i = 0; i < retries; i++) {
           try {
@@ -46,9 +34,8 @@
         }
       };
 
-      // Live XRP Price using CoinGecko
       fetchWithRetry("https://api.coingecko.com/api/v3/simple/price?ids=ripple&vs_currencies=usd", {
-        headers: { "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36" }
+        headers: { "User-Agent": "Mozilla/5.0" }
       })
         .then(data => {
           const price = data.ripple.usd.toFixed(3);
@@ -58,32 +45,27 @@
         .catch(err => {
           document.getElementById("price").innerHTML =
             `Live XRP Price: <span class="text-red-400">Error: ${err.message}</span>`;
-          console.error("Price Error:", err);
         });
 
-      // 24hr XRP Chart using CoinCap, with fallback to KuCoin
       const endTime = Date.now();
-      const startTime = endTime - 24 * 60 * 60 * 1000; // 24 hours ago in milliseconds
+      const startTime = endTime - 24 * 60 * 60 * 1000;
 
       const renderChart = (labels, values, label) => {
         const ctx = document.getElementById('xrpChart').getContext('2d');
-
-        // Determine the trend over the last 4 hours
-        const fourHoursInPoints = 4; // Since we have hourly data, 4 hours = 4 data points
-        const recentValues = values.slice(-fourHoursInPoints); // Last 4 hours of data
+        const recentValues = values.slice(-4);
         const startPrice = recentValues[0];
         const endPrice = recentValues[recentValues.length - 1];
-        const trendColor = endPrice > startPrice ? '#00FF00' : '#FF0000'; // Green for up, red for down
+        const trendColor = endPrice > startPrice ? '#00FF00' : '#FF0000';
 
         new Chart(ctx, {
           type: 'line',
           data: {
             labels,
             datasets: [{
-              label: label,
+              label,
               data: values,
               borderColor: trendColor,
-              backgroundColor: trendColor + '33', // Add some transparency for the fill
+              backgroundColor: trendColor + '33',
               tension: 0.3,
               pointRadius: 1
             }]
@@ -100,65 +82,47 @@
         });
       };
 
-      // Try CoinCap first
       fetchWithRetry(`https://api.coincap.io/v2/assets/ripple/history?interval=h1&start=${startTime}&end=${endTime}`, {
-        headers: { "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36" }
+        headers: { "User-Agent": "Mozilla/5.0" }
       })
         .then(response => {
-          const data = response.data; // CoinCap nests the data in a "data" property
-          console.log("CoinCap Chart Data:", data);
-          const labels = data.map(d => {
-            const date = new Date(parseInt(d.time));
-            return date.getHours().toString().padStart(2, '0') + ":00";
-          });
+          const data = response.data;
+          const labels = data.map(d => new Date(parseInt(d.time)).getHours().toString().padStart(2, '0') + ":00");
           const values = data.map(d => parseFloat(d.priceUsd).toFixed(3));
 
-          if (!labels.length || !values.length) {
-            throw new Error("No data available for the chart");
-          }
+          if (!labels.length || !values.length) throw new Error("No data available");
 
           renderChart(labels, values, 'XRP/USD (24h)');
         })
         .catch(err => {
-          console.error("CoinCap Chart Error:", err);
-
-          // Fallback to KuCoin API
-          const startAt = Math.floor(startTime / 1000); // KuCoin uses seconds
+          console.error("CoinCap Error:", err);
+          const startAt = Math.floor(startTime / 1000);
           const endAt = Math.floor(endTime / 1000);
+
           fetchWithRetry(`https://api.kucoin.com/api/v1/market/candles?symbol=XRP-USDT&type=1hour&startAt=${startAt}&endAt=${endAt}`, {
-            headers: { "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36" }
+            headers: { "User-Agent": "Mozilla/5.0" }
           })
             .then(response => {
-              const data = response.data; // KuCoin nests the data in a "data" property
-              console.log("KuCoin Chart Data:", data);
-              const labels = data.map(d => {
-                const date = new Date(parseInt(d[0]) * 1000); // KuCoin timestamp is in seconds
-                return date.getHours().toString().padStart(2, '0') + ":00";
-              });
-              const values = data.map(d => parseFloat(d[4]).toFixed(3)); // d[4] is the closing price
+              const data = response.data;
+              const labels = data.map(d => new Date(parseInt(d[0]) * 1000).getHours().toString().padStart(2, '0') + ":00");
+              const values = data.map(d => parseFloat(d[4]).toFixed(3));
 
-              if (!labels.length || !values.length) {
-                throw new Error("No data available for the chart");
-              }
+              if (!labels.length || !values.length) throw new Error("No data available");
 
               renderChart(labels, values, 'XRP/USD (24h)');
             })
             .catch(err => {
               console.error("KuCoin Chart Error:", err);
-              // Clear the chart container and show mock chart
               const chartContainer = document.getElementById("chartContainer");
               chartContainer.innerHTML = '';
               const ctx = document.createElement('canvas');
               ctx.id = 'xrpChart';
-              ctx.className = 'bg-gray-800 rounded shadow w-full';
+              ctx.className = 'bg-gray-800 rounded shadow w-full h-64';
               chartContainer.appendChild(ctx);
               const mockLabels = Array(24).fill().map((_, i) => `${i}:00`);
               const mockValues = Array(24).fill().map(() => 0.5 + Math.random() * 0.1);
-
-              // Mock trend for the last 4 hours
-              const recentMockValues = mockValues.slice(-4);
-              const startMockPrice = recentMockValues[0];
-              const endMockPrice = recentMockValues[recentMockValues.length - 1];
+              const startMockPrice = mockValues[0];
+              const endMockPrice = mockValues[mockValues.length - 1];
               const mockTrendColor = endMockPrice > startMockPrice ? '#00FF00' : '#FF0000';
 
               new Chart(ctx.getContext('2d'), {
@@ -184,7 +148,6 @@
             });
         });
 
-      // Adoption Signals
       fetch("Data/adoption-signals.json")
         .then(res => { if (!res.ok) throw new Error("Signals API failed"); return res.json(); })
         .then(signals => {
@@ -197,11 +160,9 @@
           });
         })
         .catch(err => {
-          console.error("Signals Error:", err);
           document.getElementById("signals").innerHTML =
             `<p class="text-red-400 text-center">Failed to load signals: ${err.message}</p>`;
         });
     });
-  </script>
-</body>
-  </html>
+  </script></body>
+</html>
