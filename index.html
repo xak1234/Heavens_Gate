@@ -16,7 +16,7 @@
   </style>
 </head>
 <body class="flex flex-col items-center justify-start min-h-screen pt-4 px-4 space-y-6 text-center">  <h1 class="text-4xl font-bold text-blue-400">Heaven's Gate</h1>  <div id="price" class="text-2xl">
-    Live XRP Price: <span class="text-green-400">Loading...</span>
+    XRP: <span class="text-green-400">Loading...</span>
   </div>  <div class="w-full max-w-xl">
     <h2 class="text-lg font-semibold mb-2">24h XRP Price Trend</h2>
     <div id="chartContainer" class="flex justify-center">
@@ -155,7 +155,7 @@
           const container = document.getElementById("signals");
           signals.forEach(signal => {
             const div = document.createElement("div");
-            div.className = "bg-gray-800 p-4 rounded shadow";
+            div.className = "bg-gray-800 p-3 rounded shadow text-sm";
             div.innerHTML = `<strong>${signal.date}</strong>: ${signal.message}`;
             container.appendChild(div);
           });
