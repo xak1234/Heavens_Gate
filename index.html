@@ -15,9 +15,11 @@
     Live XRP Price: <span class="text-green-400">Loading...</span>
   </div>
 
-  <div class="w-full max-w-2xl h-64"> <!-- Added h-64 to constrain height -->
+  <div class="w-full max-w-2xl h-64">
     <h2 class="text-xl font-semibold mb-2 text-center">24h XRP Price Trend</h2>
-    <canvas id="xrpChart" class="bg-gray-800 rounded shadow w-full"></canvas> <!-- Removed inline height -->
+    <div id="chartContainer">
+      <canvas id="xrpChart" class="bg-gray-800 rounded shadow w-full"></canvas>
+    </div>
   </div>
 
   <div class="w-full max-w-2xl">
@@ -29,19 +31,30 @@
 
   <script>
     document.addEventListener("DOMContentLoaded", () => {
-      const apiKey = "YOUR_API_KEY_HERE"; // Replace with your key or leave as "" for public access
+      const apiKey = "YOUR_API_KEY_HERE"; // Replace with your CoinGecko API key or leave as "" for public access
+
+      // Function to fetch with retry mechanism
+      const fetchWithRetry = async (url, options, retries = 3, delay = 2000) => {
+        for (let i = 0; i < retries; i++) {
+          try {
+            const res = await fetch(url, options);
+            if (!res.ok) throw new Error(`API failed with status: ${res.status}`);
+            return await res.json();
+          } catch (err) {
+            if (i === retries - 1) throw err;
+            console.warn(`Retry ${i + 1}/${retries} after ${delay}ms: ${err.message}`);
+            await new Promise(resolve => setTimeout(resolve, delay));
+          }
+        }
+      };
 
       // Live XRP Price
-      fetch("https://api.coingecko.com/api/v3/simple/price?ids=ripple&vs_currencies=usd", {
+      fetchWithRetry("https://api.coingecko.com/api/v3/simple/price?ids=ripple&vs_currencies=usd", {
         headers: {
           "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
           ...(apiKey && { "X-Cg-Demo-Api-Key": apiKey })
         }
       })
-        .then(res => {
-          if (!res.ok) throw new Error(`Price API failed with status: ${res.status}`);
-          return res.json();
-        })
         .then(data => {
           document.getElementById("price").innerHTML =
             `Live XRP Price: <span class="text-green-400">$${data.ripple.usd}</span>`;
@@ -53,16 +66,12 @@
         });
 
       // 24hr XRP Chart
-      fetch("https://api.coingecko.com/api/v3/coins/ripple/market_chart?vs_currency=usd&days=1&interval=hourly", {
+      fetchWithRetry("https://api.coingecko.com/api/v3/coins/ripple/market_chart?vs_currency=usd&days=1&interval=hourly", {
         headers: {
           "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
           ...(apiKey && { "X-Cg-Demo-Api-Key": apiKey })
         }
       })
-        .then(res => {
-          if (!res.ok) throw new Error(`Chart API failed with status: ${res.status}`);
-          return res.json();
-        })
         .then(data => {
           console.log("Chart Data:", data);
           const ctx = document.getElementById('xrpChart').getContext('2d');
@@ -102,14 +111,13 @@
         })
         .catch(err => {
           console.error("Chart Error:", err);
-          document.getElementById("xrpChart").replaceWith(
-            `<p class="text-red-400 text-center">Failed to load chart: ${err.message}</p>`
-          );
-          // Fallback: Mock data
+          // Clear the chart container and show mock chart
+          const chartContainer = document.getElementById("chartContainer");
+          chartContainer.innerHTML = ''; // Clear previous content
           const ctx = document.createElement('canvas');
           ctx.id = 'xrpChart';
           ctx.className = 'bg-gray-800 rounded shadow w-full';
-          document.querySelector('.max-w-2xl.h-64').appendChild(ctx);
+          chartContainer.appendChild(ctx);
           const mockLabels = Array(24).fill().map((_, i) => `${i}:00`);
           const mockValues = Array(24).fill().map(() => 0.5 + Math.random() * 0.1);
           new Chart(ctx.getContext('2d'), {
@@ -154,4 +162,4 @@
     });
   </script>
 </body>
-  </html>
+</html>
